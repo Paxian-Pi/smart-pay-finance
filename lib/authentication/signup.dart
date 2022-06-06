@@ -8,26 +8,27 @@ import 'package:flutter/services.dart';
 import 'package:flutter_spinkit/flutter_spinkit.dart';
 import 'package:page_transition/page_transition.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:smart_pay/blank_home.dart';
+import 'package:smart_pay/pages/blank_home.dart';
 import 'package:smart_pay/constants.dart';
+import 'package:smart_pay/authentication/login.dart';
 import 'package:smart_pay/model/auth_model.dart';
-import 'package:smart_pay/onboarding.dart';
-import 'package:smart_pay/signup.dart';
-import 'package:smart_pay/verification.dart';
+import 'package:smart_pay/authentication/verification.dart';
 
-class Login extends StatefulWidget {
-  const Login({Key? key}) : super(key: key);
+class Signup extends StatefulWidget {
+  const Signup({Key? key}) : super(key: key);
 
   @override
-  State<Login> createState() => _LoginState();
+  State<Signup> createState() => _SignupState();
 }
 
-class _LoginState extends State<Login> {
+class _SignupState extends State<Signup> {
   final formKey = GlobalKey<FormState>();
 
+  final TextEditingController _fullnameController = TextEditingController();
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
 
+  FocusNode? _fullnameFocusNode;
   FocusNode? _emailFocusNode;
   FocusNode? _passwordFocusNode;
 
@@ -35,25 +36,15 @@ class _LoginState extends State<Login> {
   void initState() {
     super.initState();
 
+    _fullnameFocusNode = FocusNode();
     _emailFocusNode = FocusNode();
     _passwordFocusNode = FocusNode();
-
-    _emailFocusNode!.addListener(() {
-      if (kDebugMode) {
-        print('focusNode updated: hasFocus: ${_emailFocusNode!.hasFocus}');
-      }
-    });
-
-    _passwordFocusNode!.addListener(() {
-      if (kDebugMode) {
-        print('focusNode updated: hasFocus: ${_passwordFocusNode!.hasFocus}');
-      }
-    });
   }
 
   @override
   void dispose() {
     // Clean up the focus node when the Form is disposed.
+    _fullnameFocusNode!.dispose();
     _emailFocusNode!.dispose();
     _passwordFocusNode!.dispose();
 
@@ -75,19 +66,42 @@ class _LoginState extends State<Login> {
     return false;
   }
 
-  bool _isLoginClicked = false;
+  bool _isSignupClicked = false;
+  bool _isSuccessful = false;
 
   late SharedPreferences _pref;
 
   final Dio _dio = Dio();
 
-  Future _login(LoginRequestModel loginRequest) async {
-    String loginUrl = '${Constants.baseUrl}/auth/login';
+  Future _getEmailToken(GetEmailTokenRequestModel emailTokenRequest) async {
+    String emailTokenUrl = '${Constants.baseUrl}/auth/email';
 
     try {
-      final response = await _dio.post(loginUrl, data: loginRequest);
+      final response = await _dio.post(emailTokenUrl, data: emailTokenRequest);
 
-      if (kDebugMode) print('smart_pay_res: ${response.data}');
+      return response.data;
+    } on DioError catch (e) {
+      return e.response!.data;
+    }
+  }
+
+  Future _verifyEmail(VerifyEmailRequestModel verifyRequest) async {
+    String verifyUrl = '${Constants.baseUrl}/auth/email/verify';
+
+    try {
+      final response = await _dio.post(verifyUrl, data: verifyRequest);
+
+      return response.data;
+    } on DioError catch (e) {
+      return e.response!.data;
+    }
+  }
+
+  Future _signup(RegisterRequestModel registerRequest) async {
+    String registerUrl = '${Constants.baseUrl}/auth/register';
+
+    try {
+      final response = await _dio.post(registerUrl, data: registerRequest);
 
       return response.data;
     } on DioError catch (e) {
@@ -114,14 +128,14 @@ class _LoginState extends State<Login> {
                 _appBar(context),
                 _appText(),
                 const SizedBox(height: 40),
+                _fullname(),
                 _emailField(),
                 _passwordField(),
-                _forgotPassword(),
-                _loginButton(),
+                _signupButton(),
                 const SizedBox(height: 30),
-                _alternativeLogin(),
+                _alternativeSignup(),
                 const SizedBox(height: 30),
-                _signUpText()
+                _signInText()
               ],
             ),
           ),
@@ -177,14 +191,59 @@ class _LoginState extends State<Login> {
         const SizedBox(height: 40),
         Container(
           margin: const EdgeInsets.only(left: 20),
-          child: Image.asset('assets/hi_there.png'),
-        ),
-        const SizedBox(height: 15),
-        Container(
-          margin: const EdgeInsets.only(left: 20),
-          child: const Text('Welcome back, sign in to your account'),
+          child: Image.asset('assets/image_title.png'),
         ),
       ],
+    );
+  }
+
+  Widget _fullname() {
+    return Container(
+      width: double.infinity,
+      height: 70,
+      margin: const EdgeInsets.only(top: 20, bottom: 5, left: 20, right: 20),
+      padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 5),
+      decoration: BoxDecoration(
+        border: Border.all(
+          color: _fullnameFocusNode!.hasFocus
+              ? const Color(0xFFFFAB63)
+              : const Color(0xFFF9FAFB),
+          width: 1,
+        ),
+        color: const Color(0xFFF9FAFB),
+        borderRadius: const BorderRadius.all(
+          Radius.circular(20),
+        ),
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.start,
+        children: [
+          Expanded(
+            child: Container(
+              margin: const EdgeInsets.only(left: 10),
+              child: TextFormField(
+                controller: _fullnameController,
+                onTap: () => _fullnameFocusNode!.requestFocus(),
+                focusNode: _fullnameFocusNode,
+                keyboardType: TextInputType.name,
+                maxLines: 1,
+                decoration: InputDecoration(
+                  label: const Text('Fullname'),
+                  labelStyle: _fullnameFocusNode!.hasFocus
+                      ? const TextStyle(color: Color(0xFFFFAB63))
+                      : const TextStyle(color: Colors.grey),
+                  border: InputBorder.none,
+                ),
+                validator: (value) {
+                  if (value!.isEmpty) {
+                    return 'Please enter your name';
+                  }
+                },
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 
@@ -201,13 +260,6 @@ class _LoginState extends State<Login> {
               : const Color(0xFFF9FAFB),
           width: 1,
         ),
-        // boxShadow: const [
-        //   BoxShadow(
-        //     color: Constant.accent,
-        //     blurRadius: 10,
-        //     offset: Offset(1, 1),
-        //   ),
-        // ],
         color: const Color(0xFFF9FAFB),
         borderRadius: const BorderRadius.all(
           Radius.circular(20),
@@ -240,7 +292,7 @@ class _LoginState extends State<Login> {
                               r"^[a-zA-Z0-9.a-zA-Z0-9.!#$%&'*+-/=?^_`{|}~]+@[a-zA-Z0-9]+\.[a-zA-Z]+")
                           .hasMatch(value)
                       ? null
-                      : "This is not an email";
+                      : "Invalid email";
                 },
               ),
             ),
@@ -268,13 +320,6 @@ class _LoginState extends State<Login> {
               : const Color(0xFFF9FAFB),
           width: 1,
         ),
-        // boxShadow: const [
-        //   BoxShadow(
-        //     color: Constant.accent,
-        //     blurRadius: 10,
-        //     offset: Offset(1, 1),
-        //   ),
-        // ],
         color: const Color(0xFFF9FAFB),
         borderRadius: const BorderRadius.all(
           Radius.circular(20),
@@ -318,21 +363,10 @@ class _LoginState extends State<Login> {
     );
   }
 
-  Widget _forgotPassword() {
-    return Container(
-      margin: const EdgeInsets.only(left: 20, top: 10),
-      alignment: Alignment.centerLeft,
-      padding: const EdgeInsets.only(right: 20.0),
-      child: TextButton(
-        onPressed: () {},
-        child: const Text(
-          'Forgot Password?',
-          style: TextStyle(
-            color: Color(0xFFFFAB63),
-            fontSize: 16,
-          ),
-        ),
-      ),
+  Widget _spinnar() {
+    return const SpinKitSpinningLines(
+      color: Colors.white,
+      size: 40.0,
     );
   }
 
@@ -346,15 +380,17 @@ class _LoginState extends State<Login> {
             SystemSound.play(SystemSoundType.click);
 
             Navigator.of(context).pop();
-
-            Timer(const Duration(milliseconds: 500), () {
-              Navigator.of(context).push(
-                PageTransition(
-                  child: const Signup(),
-                  type: PageTransitionType.rightToLeft,
-                ),
-              );
-            });
+            Timer(
+              const Duration(milliseconds: 1000),
+              (() {
+                Navigator.of(context).pushReplacement(
+                  PageTransition(
+                    child: const Login(),
+                    type: PageTransitionType.fade,
+                  ),
+                );
+              }),
+            );
           },
           child: Container(
             width: MediaQuery.of(context).size.width * 0.8,
@@ -449,68 +485,71 @@ class _LoginState extends State<Login> {
     );
   }
 
-  Widget _spinnar() {
-    return const SpinKitSpinningLines(
-      color: Colors.white,
-      size: 40.0,
-    );
-  }
-
-  Widget _loginButton() {
+  Widget _signupButton() {
     return Container(
       margin: const EdgeInsets.only(top: 20),
       alignment: Alignment.center,
       child: ElevatedButton(
         onPressed: () {
           setState(() {
-            _isLoginClicked = true;
+            _isSignupClicked = true;
           });
-          
-          _login(
-            LoginRequestModel(
+
+          _getEmailToken(
+                  GetEmailTokenRequestModel(email: _emailController.text))
+              .then((value) {
+            _verifyEmail(
+              VerifyEmailRequestModel(
                 email: _emailController.text,
-                password: _passwordController.text,
-                deviceName: 'web'),
-          ).then((value) async {
-            // if (kDebugMode) print(value);
+                token: value['data']['token'],
+              ),
+            ).then((value) {
+              print(value);
 
-            _isLoginClicked = false;
+              _signup(
+                RegisterRequestModel(
+                    fullName: _fullnameController.text,
+                    username: '',
+                    email: _emailController.text,
+                    country: 'NG',
+                    password: _passwordController.text,
+                    deviceName: 'web'),
+              ).then((value) {
+                if ((value['message'] == 'The given data was invalid.')) {
+                  if (value!['errors']['password'][0] ==
+                      'The password must contain at least one uppercase and one lowercase letter.') {
+                    _showDialog(
+                      context,
+                      value['message'] + '\n' + value!['errors']['password'][0],
+                      'Okay',
+                    );
+                  }
 
-            // Check if user is registered or verified
-            if (value['message'] == 'The given data was invalid.') {
-              _showDialog(
-                context,
-                value['message'] + '\n' + value['errors']['email'][0],
-                'Create An Account',
-              );
-              return;
-            } else {
-              _pref = await SharedPreferences.getInstance();
+                  if (value!['errors']['email'][0] ==
+                      'The email has already been taken.') {
+                    _showDialog(
+                      context,
+                      value['message'] + '\n' + value!['errors']['email'][0],
+                      'Okay',
+                    );
+                  }
 
-              if (kDebugMode) print(value['data']['token']);
-              
-              // Save authorization token to sheared preferences
-              _pref.setString(Constants.authToken, value['data']['token']);
+                  return;
+                }
 
-              // Check if user has re-login PIN
-              if (_pref.getString(Constants.loginPIN) == null) {
-                Navigator.of(context).pushReplacement(
-                  PageTransition(
-                    child: const Verification(),
-                    type: PageTransitionType.fade,
-                  ),
-                );
+                _isSignupClicked = false;
+                _isSuccessful = true;
 
-                return;
-              }
-
-              Navigator.of(context).pushReplacement(
-                PageTransition(
-                  child: const BlankHome(),
-                  type: PageTransitionType.fade,
-                ),
-              );
-            }
+                Timer(const Duration(milliseconds: 1000), () {
+                  Navigator.of(context).pushReplacement(
+                    PageTransition(
+                      child: const Login(),
+                      type: PageTransitionType.fade,
+                    ),
+                  );
+                });
+              });
+            });
           });
         },
         style: ElevatedButton.styleFrom(
@@ -533,11 +572,11 @@ class _LoginState extends State<Login> {
             width: MediaQuery.of(context).size.width * 0.9,
             height: 50,
             alignment: Alignment.center,
-            child: _isLoginClicked
+            child: _isSignupClicked
                 ? _spinnar()
-                : const Text(
-                    'Sign In',
-                    style: TextStyle(
+                : Text(
+                    _isSuccessful ? 'Successful' : 'Sign Up',
+                    style: const TextStyle(
                       fontSize: 20,
                       color: Colors.white,
                     ),
@@ -548,7 +587,7 @@ class _LoginState extends State<Login> {
     );
   }
 
-  Widget _alternativeLogin() {
+  Widget _alternativeSignup() {
     return Column(
       children: [
         Row(
@@ -590,8 +629,9 @@ class _LoginState extends State<Login> {
             elevation: 0,
             padding: EdgeInsets.zero,
             shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(15),
-                side: const BorderSide(color: Colors.grey)),
+              borderRadius: BorderRadius.circular(15),
+              side: const BorderSide(color: Colors.grey),
+            ),
           ),
           child: Ink(
             decoration: BoxDecoration(
@@ -646,25 +686,25 @@ class _LoginState extends State<Login> {
     );
   }
 
-  Widget _signUpText() {
+  Widget _signInText() {
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
         const Text(
-          'Don\'t have an account? ',
+          'Already have an account? ',
           style: TextStyle(color: Colors.grey, fontSize: 16.0),
         ),
         TextButton(
           onPressed: () {
-            Navigator.of(context).push(
+            Navigator.of(context).pushReplacement(
               PageTransition(
-                child: const Signup(),
+                child: const Login(),
                 type: PageTransitionType.fade,
               ),
             );
           },
           child: const Text(
-            'Sign Up',
+            'Sign In',
             style: TextStyle(
               color: Color(0xFFFFAB63),
               fontSize: 18,

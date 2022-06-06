@@ -1,6 +1,6 @@
 import 'package:animated_splash_screen/animated_splash_screen.dart';
 import 'package:flutter/material.dart';
-import 'package:smart_pay/onboarding.dart';
+import 'package:smart_pay/pages/onboarding.dart';
 
 void main() {
   runApp(const MyApp());

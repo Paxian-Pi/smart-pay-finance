@@ -9,10 +9,10 @@ import 'package:page_transition/page_transition.dart';
 import 'package:pinput/pinput.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:smart_pay/constants.dart';
-import 'package:smart_pay/login.dart';
+import 'package:smart_pay/authentication/login.dart';
 import 'package:smart_pay/model/auth_model.dart';
 
-import 'blank_home.dart';
+import '../pages/blank_home.dart';
 
 class Verification extends StatefulWidget {
   const Verification({Key? key}) : super(key: key);

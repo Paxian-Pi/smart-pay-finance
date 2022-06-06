@@ -2,11 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:introduction_screen/introduction_screen.dart';
 import 'package:page_transition/page_transition.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:smart_pay/blank_home.dart';
+import 'package:smart_pay/authentication/login.dart';
+import 'package:smart_pay/pages/blank_home.dart';
 import 'package:smart_pay/constants.dart';
-import 'package:smart_pay/verification.dart';
-
-import 'login.dart';
+import 'package:smart_pay/authentication/verification.dart';
 
 class OnBoarding extends StatefulWidget {
   const OnBoarding({Key? key}) : super(key: key);

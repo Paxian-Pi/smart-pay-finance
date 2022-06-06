@@ -8,27 +8,25 @@ import 'package:flutter/services.dart';
 import 'package:flutter_spinkit/flutter_spinkit.dart';
 import 'package:page_transition/page_transition.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:smart_pay/blank_home.dart';
+import 'package:smart_pay/authentication/signup.dart';
+import 'package:smart_pay/pages/blank_home.dart';
 import 'package:smart_pay/constants.dart';
-import 'package:smart_pay/login.dart';
 import 'package:smart_pay/model/auth_model.dart';
-import 'package:smart_pay/verification.dart';
+import 'package:smart_pay/authentication/verification.dart';
 
-class Signup extends StatefulWidget {
-  const Signup({Key? key}) : super(key: key);
+class Login extends StatefulWidget {
+  const Login({Key? key}) : super(key: key);
 
   @override
-  State<Signup> createState() => _SignupState();
+  State<Login> createState() => _LoginState();
 }
 
-class _SignupState extends State<Signup> {
+class _LoginState extends State<Login> {
   final formKey = GlobalKey<FormState>();
 
-  final TextEditingController _fullnameController = TextEditingController();
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
 
-  FocusNode? _fullnameFocusNode;
   FocusNode? _emailFocusNode;
   FocusNode? _passwordFocusNode;
 
@@ -36,15 +34,25 @@ class _SignupState extends State<Signup> {
   void initState() {
     super.initState();
 
-    _fullnameFocusNode = FocusNode();
     _emailFocusNode = FocusNode();
     _passwordFocusNode = FocusNode();
+
+    _emailFocusNode!.addListener(() {
+      if (kDebugMode) {
+        print('focusNode updated: hasFocus: ${_emailFocusNode!.hasFocus}');
+      }
+    });
+
+    _passwordFocusNode!.addListener(() {
+      if (kDebugMode) {
+        print('focusNode updated: hasFocus: ${_passwordFocusNode!.hasFocus}');
+      }
+    });
   }
 
   @override
   void dispose() {
     // Clean up the focus node when the Form is disposed.
-    _fullnameFocusNode!.dispose();
     _emailFocusNode!.dispose();
     _passwordFocusNode!.dispose();
 
@@ -66,42 +74,19 @@ class _SignupState extends State<Signup> {
     return false;
   }
 
-  bool _isSignupClicked = false;
-  bool _isSuccessful = false;
+  bool _isLoginClicked = false;
 
   late SharedPreferences _pref;
 
   final Dio _dio = Dio();
 
-  Future _getEmailToken(GetEmailTokenRequestModel emailTokenRequest) async {
-    String emailTokenUrl = '${Constants.baseUrl}/auth/email';
+  Future _login(LoginRequestModel loginRequest) async {
+    String loginUrl = '${Constants.baseUrl}/auth/login';
 
     try {
-      final response = await _dio.post(emailTokenUrl, data: emailTokenRequest);
+      final response = await _dio.post(loginUrl, data: loginRequest);
 
-      return response.data;
-    } on DioError catch (e) {
-      return e.response!.data;
-    }
-  }
-
-  Future _verifyEmail(VerifyEmailRequestModel verifyRequest) async {
-    String verifyUrl = '${Constants.baseUrl}/auth/email/verify';
-
-    try {
-      final response = await _dio.post(verifyUrl, data: verifyRequest);
-
-      return response.data;
-    } on DioError catch (e) {
-      return e.response!.data;
-    }
-  }
-
-  Future _signup(RegisterRequestModel registerRequest) async {
-    String registerUrl = '${Constants.baseUrl}/auth/register';
-
-    try {
-      final response = await _dio.post(registerUrl, data: registerRequest);
+      if (kDebugMode) print('smart_pay_res: ${response.data}');
 
       return response.data;
     } on DioError catch (e) {
@@ -128,14 +113,14 @@ class _SignupState extends State<Signup> {
                 _appBar(context),
                 _appText(),
                 const SizedBox(height: 40),
-                _fullname(),
                 _emailField(),
                 _passwordField(),
-                _signupButton(),
+                _forgotPassword(),
+                _loginButton(),
                 const SizedBox(height: 30),
-                _alternativeSignup(),
+                _alternativeLogin(),
                 const SizedBox(height: 30),
-                _signInText()
+                _signUpText()
               ],
             ),
           ),
@@ -191,59 +176,14 @@ class _SignupState extends State<Signup> {
         const SizedBox(height: 40),
         Container(
           margin: const EdgeInsets.only(left: 20),
-          child: Image.asset('assets/image_title.png'),
+          child: Image.asset('assets/hi_there.png'),
+        ),
+        const SizedBox(height: 15),
+        Container(
+          margin: const EdgeInsets.only(left: 20),
+          child: const Text('Welcome back, sign in to your account'),
         ),
       ],
-    );
-  }
-
-  Widget _fullname() {
-    return Container(
-      width: double.infinity,
-      height: 70,
-      margin: const EdgeInsets.only(top: 20, bottom: 5, left: 20, right: 20),
-      padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 5),
-      decoration: BoxDecoration(
-        border: Border.all(
-          color: _fullnameFocusNode!.hasFocus
-              ? const Color(0xFFFFAB63)
-              : const Color(0xFFF9FAFB),
-          width: 1,
-        ),
-        color: const Color(0xFFF9FAFB),
-        borderRadius: const BorderRadius.all(
-          Radius.circular(20),
-        ),
-      ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.start,
-        children: [
-          Expanded(
-            child: Container(
-              margin: const EdgeInsets.only(left: 10),
-              child: TextFormField(
-                controller: _fullnameController,
-                onTap: () => _fullnameFocusNode!.requestFocus(),
-                focusNode: _fullnameFocusNode,
-                keyboardType: TextInputType.name,
-                maxLines: 1,
-                decoration: InputDecoration(
-                  label: const Text('Fullname'),
-                  labelStyle: _fullnameFocusNode!.hasFocus
-                      ? const TextStyle(color: Color(0xFFFFAB63))
-                      : const TextStyle(color: Colors.grey),
-                  border: InputBorder.none,
-                ),
-                validator: (value) {
-                  if (value!.isEmpty) {
-                    return 'Please enter your name';
-                  }
-                },
-              ),
-            ),
-          ),
-        ],
-      ),
     );
   }
 
@@ -260,6 +200,13 @@ class _SignupState extends State<Signup> {
               : const Color(0xFFF9FAFB),
           width: 1,
         ),
+        // boxShadow: const [
+        //   BoxShadow(
+        //     color: Constant.accent,
+        //     blurRadius: 10,
+        //     offset: Offset(1, 1),
+        //   ),
+        // ],
         color: const Color(0xFFF9FAFB),
         borderRadius: const BorderRadius.all(
           Radius.circular(20),
@@ -292,7 +239,7 @@ class _SignupState extends State<Signup> {
                               r"^[a-zA-Z0-9.a-zA-Z0-9.!#$%&'*+-/=?^_`{|}~]+@[a-zA-Z0-9]+\.[a-zA-Z]+")
                           .hasMatch(value)
                       ? null
-                      : "Invalid email";
+                      : "This is not an email";
                 },
               ),
             ),
@@ -320,6 +267,13 @@ class _SignupState extends State<Signup> {
               : const Color(0xFFF9FAFB),
           width: 1,
         ),
+        // boxShadow: const [
+        //   BoxShadow(
+        //     color: Constant.accent,
+        //     blurRadius: 10,
+        //     offset: Offset(1, 1),
+        //   ),
+        // ],
         color: const Color(0xFFF9FAFB),
         borderRadius: const BorderRadius.all(
           Radius.circular(20),
@@ -363,10 +317,21 @@ class _SignupState extends State<Signup> {
     );
   }
 
-  Widget _spinnar() {
-    return const SpinKitSpinningLines(
-      color: Colors.white,
-      size: 40.0,
+  Widget _forgotPassword() {
+    return Container(
+      margin: const EdgeInsets.only(left: 20, top: 10),
+      alignment: Alignment.centerLeft,
+      padding: const EdgeInsets.only(right: 20.0),
+      child: TextButton(
+        onPressed: () {},
+        child: const Text(
+          'Forgot Password?',
+          style: TextStyle(
+            color: Color(0xFFFFAB63),
+            fontSize: 16,
+          ),
+        ),
+      ),
     );
   }
 
@@ -380,17 +345,15 @@ class _SignupState extends State<Signup> {
             SystemSound.play(SystemSoundType.click);
 
             Navigator.of(context).pop();
-            Timer(
-              const Duration(milliseconds: 1000),
-              (() {
-                Navigator.of(context).pushReplacement(
-                  PageTransition(
-                    child: const Login(),
-                    type: PageTransitionType.fade,
-                  ),
-                );
-              }),
-            );
+
+            Timer(const Duration(milliseconds: 500), () {
+              Navigator.of(context).push(
+                PageTransition(
+                  child: const Signup(),
+                  type: PageTransitionType.rightToLeft,
+                ),
+              );
+            });
           },
           child: Container(
             width: MediaQuery.of(context).size.width * 0.8,
@@ -485,71 +448,68 @@ class _SignupState extends State<Signup> {
     );
   }
 
-  Widget _signupButton() {
+  Widget _spinnar() {
+    return const SpinKitSpinningLines(
+      color: Colors.white,
+      size: 40.0,
+    );
+  }
+
+  Widget _loginButton() {
     return Container(
       margin: const EdgeInsets.only(top: 20),
       alignment: Alignment.center,
       child: ElevatedButton(
         onPressed: () {
           setState(() {
-            _isSignupClicked = true;
+            _isLoginClicked = true;
           });
-
-          _getEmailToken(
-                  GetEmailTokenRequestModel(email: _emailController.text))
-              .then((value) {
-            _verifyEmail(
-              VerifyEmailRequestModel(
+          
+          _login(
+            LoginRequestModel(
                 email: _emailController.text,
-                token: value['data']['token'],
-              ),
-            ).then((value) {
-              print(value);
+                password: _passwordController.text,
+                deviceName: 'web'),
+          ).then((value) async {
+            // if (kDebugMode) print(value);
 
-              _signup(
-                RegisterRequestModel(
-                    fullName: _fullnameController.text,
-                    username: '',
-                    email: _emailController.text,
-                    country: 'NG',
-                    password: _passwordController.text,
-                    deviceName: 'web'),
-              ).then((value) {
-                if ((value['message'] == 'The given data was invalid.')) {
-                  if (value!['errors']['password'][0] ==
-                      'The password must contain at least one uppercase and one lowercase letter.') {
-                    _showDialog(
-                      context,
-                      value['message'] + '\n' + value!['errors']['password'][0],
-                      'Okay',
-                    );
-                  }
+            _isLoginClicked = false;
 
-                  if (value!['errors']['email'][0] ==
-                      'The email has already been taken.') {
-                    _showDialog(
-                      context,
-                      value['message'] + '\n' + value!['errors']['email'][0],
-                      'Okay',
-                    );
-                  }
+            // Check if user is registered or verified
+            if (value['message'] == 'The given data was invalid.') {
+              _showDialog(
+                context,
+                value['message'] + '\n' + value['errors']['email'][0],
+                'Create An Account',
+              );
+              return;
+            } else {
+              _pref = await SharedPreferences.getInstance();
 
-                  return;
-                }
+              if (kDebugMode) print(value['data']['token']);
+              
+              // Save authorization token to sheared preferences
+              _pref.setString(Constants.authToken, value['data']['token']);
 
-                _isSignupClicked = false;
-                _isSuccessful = true;
+              // Check if user has re-login PIN
+              if (_pref.getString(Constants.loginPIN) == null) {
+                Navigator.of(context).pushReplacement(
+                  PageTransition(
+                    child: const Verification(),
+                    type: PageTransitionType.fade,
+                  ),
+                );
 
-                Timer(const Duration(milliseconds: 1000), () {
-                  Navigator.of(context).pushReplacement(
-                    PageTransition(
-                      child: const Login(),
-                      type: PageTransitionType.fade,
-                    ),
-                  );
-                });
-              });
-            });
+                return;
+              }
+
+              Navigator.of(context).pushReplacement(
+                PageTransition(
+                  child: const BlankHome(),
+                  type: PageTransitionType.fade,
+                ),
+              );
+            }
           });
         },
         style: ElevatedButton.styleFrom(
@@ -572,11 +532,11 @@ class _SignupState extends State<Signup> {
             width: MediaQuery.of(context).size.width * 0.9,
             height: 50,
             alignment: Alignment.center,
-            child: _isSignupClicked
+            child: _isLoginClicked
                 ? _spinnar()
-                : Text(
-                    _isSuccessful ? 'Successful' : 'Sign Up',
-                    style: const TextStyle(
+                : const Text(
+                    'Sign In',
+                    style: TextStyle(
                       fontSize: 20,
                       color: Colors.white,
                     ),
@@ -587,7 +547,7 @@ class _SignupState extends State<Signup> {
     );
   }
 
-  Widget _alternativeSignup() {
+  Widget _alternativeLogin() {
     return Column(
       children: [
         Row(
@@ -629,9 +589,8 @@ class _SignupState extends State<Signup> {
             elevation: 0,
             padding: EdgeInsets.zero,
             shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(15),
-              side: const BorderSide(color: Colors.grey),
-            ),
+                borderRadius: BorderRadius.circular(15),
+                side: const BorderSide(color: Colors.grey)),
           ),
           child: Ink(
             decoration: BoxDecoration(
@@ -686,25 +645,25 @@ class _SignupState extends State<Signup> {
     );
   }
 
-  Widget _signInText() {
+  Widget _signUpText() {
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
         const Text(
-          'Already have an account? ',
+          'Don\'t have an account? ',
           style: TextStyle(color: Colors.grey, fontSize: 16.0),
         ),
         TextButton(
           onPressed: () {
-            Navigator.of(context).pushReplacement(
+            Navigator.of(context).push(
               PageTransition(
-                child: const Login(),
+                child: const Signup(),
                 type: PageTransitionType.fade,
               ),
             );
           },
           child: const Text(
-            'Sign In',
+            'Sign Up',
             style: TextStyle(
               color: Color(0xFFFFAB63),
               fontSize: 18,

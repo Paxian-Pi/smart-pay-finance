@@ -10,7 +10,7 @@ import 'package:page_transition/page_transition.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:smart_pay/constants.dart';
 
-import 'login.dart';
+import '../authentication/login.dart';
 
 class BlankHome extends StatefulWidget {
   const BlankHome({Key? key}) : super(key: key);
